@@ -18,7 +18,7 @@ filters:
 
 pair_selection:
   method: "engle_granger"
-  adf_pvalue_threshold: 0.01
+  coint_pvalue_threshold: 0.05
   min_correlation: 0.60
   max_pairs_to_keep: 50
   sector_filter: true
