@@ -98,6 +98,13 @@ Run the unit tests with:
 pytest
 ```
 
+## Documentation
+
+Additional project documentation is available in the `docs/` directory:
+
+- [`docs/project_roadmap.md`](docs/project_roadmap.md): development roadmap
+- [`docs/research_notes.md`](docs/research_notes.md): methodology notes, assumptions, and research limitations
+
 ## Research Pipeline
 
 The project is designed around the following workflow:
