@@ -32,6 +32,7 @@ pairs-trading-research/
 │
 ├── config/       # Configuration files for universes, dates, and strategy parameters
 ├── data/         # Raw and processed data, usually ignored if too large
+├── docs/         # Methodology notes, roadmap, and project documentation
 ├── notebooks/    # Exploratory research notebooks and case studies
 ├── reports/      # Generated reports, figures, and results
 ├── scripts/      # Executable scripts for running pipelines
@@ -40,6 +41,61 @@ pairs-trading-research/
 ├── README.md
 ├── LICENSE
 └── .gitignore
+```
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/Evenson0/pairs-trading-research.git
+cd pairs-trading-research
+```
+
+Create and activate a virtual environment:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+On Windows:
+
+```bash
+.venv\Scripts\activate
+```
+
+Install the project in editable mode with development dependencies:
+
+```bash
+pip install -e ".[dev]"
+```
+
+## Quick Start
+
+Run the baseline S&P/TSX 60 pipeline:
+
+```bash
+python scripts/run_tsx60_pipeline.py
+```
+
+The script will:
+
+1. Load the S&P/TSX 60 universe.
+2. Download adjusted price data.
+3. Clean and align the price series.
+4. Search for cointegrated pairs.
+5. Select the best candidate pair.
+6. Generate rolling z-score trading signals.
+7. Run a baseline paper-trading backtest.
+8. Print a performance summary.
+
+## Running Tests
+
+Run the unit tests with:
+
+```bash
+pytest
 ```
 
 ## Research Pipeline
