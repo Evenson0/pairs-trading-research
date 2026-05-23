@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this project in your research or teaching, please cite it as below."
+title: "Pairs Trading Research"
+type: software
+authors:
+  - family-names: "Auguste"
+    given-names: "Evenson"
+repository-code: "https://github.com/Evenson0/pairs-trading-research"
+abstract: "A reproducible framework for studying cointegration-based statistical arbitrage across equity universes."
+keywords:
+  - pairs trading
+  - statistical arbitrage
+  - cointegration
+  - quantitative finance
+  - backtesting
+  - PCA
+  - ARMA
+license: MIT
+version: "0.1.0"
+date-released: "2026-05-23"
