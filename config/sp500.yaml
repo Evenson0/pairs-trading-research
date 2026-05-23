@@ -1,0 +1,36 @@
+universe:
+  name: "S&P 500"
+  region: "United States"
+  currency: "USD"
+  benchmark: "^GSPC"
+  source: "manual_or_wikipedia"
+  ticker_suffix: ""
+
+data:
+  start_date: "2020-01-01"
+  end_date: null
+  price_field: "Adj Close"
+  frequency: "1d"
+
+filters:
+  min_observations: 500
+  max_missing_ratio: 0.05
+
+pair_selection:
+  method: "engle_granger"
+  adf_pvalue_threshold: 0.01
+  min_correlation: 0.60
+  max_pairs_to_keep: 50
+  sector_filter: true
+
+strategy:
+  zscore_window: 60
+  entry_threshold: 2.0
+  exit_threshold: 0.5
+  stop_loss_zscore: 3.5
+  transaction_cost_bps: 5
+
+backtest:
+  initial_capital: 100000
+  train_ratio: 0.70
+  rebalance_frequency: "daily"
