@@ -119,6 +119,22 @@ This project is under active development.
 
 The first version focuses on reproducing and generalizing the original S&P/TSX 60 case study. Future versions will extend the framework to the S&P 500 and custom equity universes.
 
+## Planned Work
+
+The next development milestones are tracked through GitHub issues.
+
+Planned extensions include:
+
+- PCA-based factor modeling
+- ARMA residual forecasting
+- Walk-forward analysis
+- Full S&P 500 universe support
+- Dollar-neutral backtesting
+- Automated report generation
+- Additional tests and documentation
+
+These features will be added progressively as the project evolves.
+
 ## Disclaimer
 
 This project is for research and educational purposes only. It does not constitute financial advice, investment advice, or a recommendation to buy or sell any security.
