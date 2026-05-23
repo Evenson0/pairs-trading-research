@@ -98,6 +98,52 @@ Run the unit tests with:
 pytest
 ```
 
+## Development Commands
+
+Common development commands are available through the `Makefile`.
+
+Install the project with development dependencies:
+
+```bash
+make install
+```
+
+Check that the project is correctly installed:
+
+```bash
+make check
+```
+
+Run tests:
+
+```bash
+make test
+```
+
+Format the code:
+
+```bash
+make format
+```
+
+Run linting:
+
+```bash
+make lint
+```
+
+Run the baseline S&P/TSX 60 pipeline:
+
+```bash
+make run-tsx60
+```
+
+Clean temporary files:
+
+```bash
+make clean
+```
+
 ## Documentation
 
 Additional project documentation is available in the `docs/` directory:
