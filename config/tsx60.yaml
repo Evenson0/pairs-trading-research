@@ -1,0 +1,35 @@
+universe:
+  name: "S&P/TSX 60"
+  region: "Canada"
+  currency: "CAD"
+  benchmark: "^GSPTSE"
+  source: "manual_or_wikipedia"
+  ticker_suffix: ".TO"
+
+data:
+  start_date: "2024-10-01"
+  end_date: null
+  price_field: "Adj Close"
+  frequency: "1d"
+
+filters:
+  min_observations: 90
+  max_missing_ratio: 0.05
+
+pair_selection:
+  method: "engle_granger"
+  adf_pvalue_threshold: 0.05
+  min_correlation: 0.50
+  max_pairs_to_keep: 20
+
+strategy:
+  zscore_window: 20
+  entry_threshold: 2.0
+  exit_threshold: 0.5
+  stop_loss_zscore: 3.5
+  transaction_cost_bps: 10
+
+backtest:
+  initial_capital: 100000
+  train_ratio: 0.70
+  rebalance_frequency: "daily"
