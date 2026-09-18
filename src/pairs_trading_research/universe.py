@@ -1,18 +1,12 @@
-"""Equity universe definitions.
-
-This module provides ticker lists for supported equity universes.
-The first version uses manually curated lists to keep the project
-stable and reproducible. Automated data sources can be added later.
-"""
+"""Equity universe definitions and metadata loaders."""
 
 from __future__ import annotations
 
+import pandas as pd
+
 
 def get_tsx60_tickers() -> list[str]:
-    """Return a manually curated list of S&P/TSX 60 tickers.
-
-    The tickers use the Yahoo Finance Canadian suffix `.TO`.
-    """
+    """Return the curated Canadian large-cap universe."""
     return [
         "AEM.TO",
         "AQN.TO",
@@ -76,11 +70,76 @@ def get_tsx60_tickers() -> list[str]:
     ]
 
 
-def get_sp500_sample_tickers() -> list[str]:
-    """Return a small sample of S&P 500 tickers for development.
+def get_sp500_constituents() -> pd.DataFrame:
+    """Load current S&P 500 tickers and GICS sectors.
 
-    A full S&P 500 universe loader will be added later.
+    This is appropriate for current scanning.
+
+    Using current constituents for historical research introduces
+    survivorship bias.
     """
+    url = (
+        "https://en.wikipedia.org/wiki/"
+        "List_of_S%26P_500_companies"
+    )
+
+    table = pd.read_html(
+        url,
+        match="Symbol",
+    )[0]
+
+    required = {
+        "Symbol",
+        "GICS Sector",
+    }
+
+    if not required.issubset(
+        table.columns
+    ):
+        raise ValueError(
+            "Could not identify S&P 500 symbol/sector columns."
+        )
+
+    result = table[
+        [
+            "Symbol",
+            "GICS Sector",
+        ]
+    ].copy()
+
+    result[
+        "Symbol"
+    ] = (
+        result[
+            "Symbol"
+        ]
+        .str.replace(
+            ".",
+            "-",
+            regex=False,
+        )
+    )
+
+    result = result.rename(
+        columns={
+            "Symbol": "ticker",
+            "GICS Sector": "sector",
+        }
+    )
+
+    return (
+        result
+        .drop_duplicates(
+            "ticker"
+        )
+        .reset_index(
+            drop=True
+        )
+    )
+
+
+def get_sp500_sample_tickers() -> list[str]:
+    """Return a small offline development universe."""
     return [
         "AAPL",
         "MSFT",
@@ -105,33 +164,53 @@ def get_sp500_sample_tickers() -> list[str]:
     ]
 
 
-def get_universe_tickers(universe: str) -> list[str]:
-    """Return tickers for a supported universe.
+def get_universe_metadata(
+    universe: str,
+) -> pd.DataFrame:
+    """Return ticker metadata."""
+    name = (
+        universe
+        .lower()
+        .strip()
+    )
 
-    Parameters
-    ----------
-    universe:
-        Universe identifier. Supported values are `"tsx60"` and `"sp500_sample"`.
+    if name == "tsx60":
+        return pd.DataFrame(
+            {
+                "ticker": (
+                    get_tsx60_tickers()
+                ),
+                "sector": None,
+            }
+        )
 
-    Returns
-    -------
-    list[str]
-        List of ticker symbols.
+    if name == "sp500":
+        return (
+            get_sp500_constituents()
+        )
 
-    Raises
-    ------
-    ValueError
-        If the universe is not supported.
-    """
-    universe = universe.lower().strip()
-
-    if universe == "tsx60":
-        return get_tsx60_tickers()
-
-    if universe in {"sp500", "sp500_sample"}:
-        return get_sp500_sample_tickers()
+    if name == "sp500_sample":
+        return pd.DataFrame(
+            {
+                "ticker": (
+                    get_sp500_sample_tickers()
+                ),
+                "sector": None,
+            }
+        )
 
     raise ValueError(
-        f"Unsupported universe: {universe}. "
-        "Supported universes are: 'tsx60', 'sp500_sample'."
+        f"Unsupported universe: {universe}"
+    )
+
+
+def get_universe_tickers(
+    universe: str,
+) -> list[str]:
+    """Return ticker symbols."""
+    return (
+        get_universe_metadata(
+            universe
+        )["ticker"]
+        .tolist()
     )
