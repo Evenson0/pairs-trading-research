@@ -1,35 +1,64 @@
 universe:
   name: "S&P/TSX 60"
+  identifier: "tsx60"
   region: "Canada"
   currency: "CAD"
   benchmark: "^GSPTSE"
-  source: "manual_or_wikipedia"
-  ticker_suffix: ".TO"
 
 data:
-  start_date: "2024-10-01"
+  start_date: "2020-01-01"
   end_date: null
   price_field: "Adj Close"
   frequency: "1d"
+  batch_size: 100
 
 filters:
-  min_observations: 90
+  min_observations: 800
   max_missing_ratio: 0.05
 
 pair_selection:
   method: "engle_granger"
-  coint_pvalue_threshold: 0.05
-  min_correlation: 0.50
+  fdr_alpha: 0.05
+  min_correlation: 0.60
+  min_half_life: 2.0
+  max_half_life: 90.0
   max_pairs_to_keep: 20
+  require_positive_hedge_ratio: true
+  stability_window: 126
+  stability_step: 21
+  sector_filter: false
 
 strategy:
   zscore_window: 20
   entry_threshold: 2.0
   exit_threshold: 0.5
+  watch_threshold: 1.5
   stop_loss_zscore: 3.5
-  transaction_cost_bps: 10
 
 backtest:
   initial_capital: 100000
   train_ratio: 0.70
-  rebalance_frequency: "daily"
+  position_type: "dollar_neutral"
+  gross_exposure: 1.0
+  transaction_cost_bps: 10
+  slippage_bps: 5
+
+walk_forward:
+  training_window: 504
+  test_window: 21
+  step_size: 21
+
+live:
+  selection_lookback_days: 504
+  invalidation_lookback_days: 252
+  invalidation_pvalue: 0.10
+
+risk:
+  max_open_pairs: 5
+  max_pair_gross_exposure: 0.20
+  max_portfolio_gross_exposure: 1.00
+  max_sector_gross_exposure: 0.40
+  max_drawdown: 0.10
+
+paper:
+  state_dir: "data/paper/tsx60"
