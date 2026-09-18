@@ -1,121 +1,73 @@
 # Project Roadmap
 
-This roadmap outlines the planned development of the Pairs Trading Research project.
+## v1.0 — Research and Paper-Trading System
 
-## Phase 1 — Baseline Research Pipeline
+The v1.0 objective is a complete end-to-end pairs-trading workflow that is scientifically defensible and practically usable for research and paper trading.
 
-Goal: build a complete baseline pipeline for cointegration-based pairs trading on the S&P/TSX 60.
+### Completed scope
 
-Planned tasks:
+- Chronological train/test separation
+- Training-only pair selection and hedge-ratio estimation
+- Engle-Granger cointegration testing
+- Benjamini-Hochberg false-discovery-rate correction
+- Spread ADF diagnostics
+- Mean-reversion half-life estimation
+- Rolling hedge-ratio stability score
+- Multi-criterion candidate ranking
+- Rolling z-score signals
+- Entry, hold, exit, stop, watch, and extreme-no-entry states
+- Explicit two-leg portfolio backtest
+- Dollar-neutral or hedge-ratio-weighted portfolio modes
+- Turnover-based transaction costs and slippage
+- Current TSX and S&P 500 scanning workflows
+- Sector-aware S&P 500 pair filtering
+- Walk-forward pair reselection and re-estimation
+- Portfolio risk limits
+- Persistent local paper broker
+- Trade, position, cost, PnL, and equity logs
+- Automated baseline research report
+- Unit tests for the core research and trading logic
 
-- Define project structure
-- Add configuration files
-- Add ticker universe definitions
-- Add historical price data loader
-- Add price preprocessing utilities
-- Add cointegration analysis tools
-- Add rolling z-score signal generation
-- Add simple spread-based backtest
-- Add performance metrics
-- Add visualization utilities
-- Add TSX60 baseline pipeline script
-- Add TSX60 baseline report template
+## Research rule
 
-Status: in progress
+New models are not automatically promoted into the trading system.
 
-## Phase 2 — Research Notebook
+A candidate model must be compared against the simple baseline using held-out and walk-forward results after costs. A more complex model should be rejected when it does not improve robustness or risk-adjusted performance.
 
-Goal: create a clear notebook that reproduces the TSX60 baseline case study.
+## Post-v1 experiments
 
-Planned tasks:
+### PCA residual model
 
-- Convert the Markdown notebook outline into a Jupyter notebook
-- Add step-by-step explanations
-- Add figures for prices, spread, z-score, positions, and portfolio value
-- Add interpretation of selected pair
-- Add performance discussion
+Research whether common-factor removal produces more stable mean-reverting residual relationships.
 
-Status: planned
+### ARMA residual forecasts
 
-## Phase 3 — Factor Model Extension
+Test whether short-horizon residual forecasts improve decisions relative to the rolling z-score baseline.
 
-Goal: extend the baseline strategy using PCA-based factor modeling.
+### Historical index membership
 
-Planned tasks:
+Replace current-constituent historical studies with point-in-time membership data to reduce survivorship bias.
 
-- Add PCA factor model module
-- Compute factor loadings
-- Compare profiles of selected equities
-- Extract residual returns
-- Interpret residual behavior
-- Document the factor model methodology
+### Better execution model
 
-Status: planned
+Potential additions:
 
-## Phase 4 — ARMA Residual Modeling
+- bid-ask spread estimates
+- borrow fees
+- borrow availability
+- volume/liquidity filters
+- market impact
+- fractional-share constraints
 
-Goal: model residual dynamics and compare the ARMA-based approach with the naive z-score strategy.
+### Portfolio optimization
 
-Planned tasks:
+Potential additions:
 
-- Add ARMA residual modeling module
-- Add residual diagnostics
-- Add short-horizon residual forecasts
-- Generate model-based position signals
-- Compare baseline and ARMA-enhanced strategies
+- beta-neutral sizing
+- volatility targeting
+- covariance-aware multi-pair allocation
+- sector and factor exposure controls
 
-Status: planned
+### Broker integration
 
-## Phase 5 — Walk-Forward Evaluation
-
-Goal: evaluate the robustness of the strategy through rolling study windows.
-
-Planned tasks:
-
-- Add walk-forward analysis module
-- Re-estimate pairs and hedge ratios through time
-- Update signals every few days
-- Track position changes
-- Compare stability of results
-
-Status: planned
-
-## Phase 6 — S&P 500 Extension
-
-Goal: extend the project from the S&P/TSX 60 to the S&P 500.
-
-Planned tasks:
-
-- Add full S&P 500 universe loader
-- Add sector-aware pair filtering
-- Handle larger-scale pair search
-- Add multiple-testing warnings or corrections
-- Compare TSX60 and S&P500 results
-
-Status: planned
-
-## Phase 7 — Reporting and Automation
-
-Goal: make the project easier to run and easier to present.
-
-Planned tasks:
-
-- Add automated report generation
-- Save selected pairs and backtest summaries to CSV
-- Export figures to the reports directory
-- Add command-line arguments
-- Add tests for core modules
-
-Status: planned
-
-## Long-Term Ideas
-
-Potential future extensions:
-
-- ETF pairs trading
-- Sector-specific statistical arbitrage
-- Multi-pair portfolio construction
-- Dollar-neutral and beta-neutral portfolio sizing
-- Slippage and borrow-cost modeling
-- Interactive dashboard
-- Blog article integration
+A real broker adapter should remain a separate, explicitly enabled layer. Paper trading is the default and v1.0 boundary.
