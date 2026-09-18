@@ -5,43 +5,79 @@ from __future__ import annotations
 import pandas as pd
 
 
-def compute_total_return(portfolio_value: pd.Series) -> float:
-    """Compute total return from a portfolio value series."""
+def compute_total_return(
+    portfolio_value: pd.Series,
+) -> float:
     if portfolio_value.empty:
-        raise ValueError("Portfolio value series is empty.")
+        raise ValueError(
+            "Portfolio value series is empty."
+        )
 
-    return float(portfolio_value.iloc[-1] / portfolio_value.iloc[0] - 1)
+    return float(
+        portfolio_value.iloc[-1]
+        / portfolio_value.iloc[0]
+        - 1
+    )
 
 
 def compute_annualized_return(
     portfolio_value: pd.Series,
     periods_per_year: int = 252,
 ) -> float:
-    """Compute annualized return from a portfolio value series."""
     if portfolio_value.empty:
-        raise ValueError("Portfolio value series is empty.")
+        raise ValueError(
+            "Portfolio value series is empty."
+        )
 
-    n_periods = len(portfolio_value)
+    n_periods = len(
+        portfolio_value
+    )
 
     if n_periods <= 1:
         return 0.0
 
-    total_return = compute_total_return(portfolio_value)
+    total_return = (
+        compute_total_return(
+            portfolio_value
+        )
+    )
 
-    return float((1 + total_return) ** (periods_per_year / n_periods) - 1)
+    if (
+        1
+        + total_return
+        <= 0
+    ):
+        return -1.0
+
+    return float(
+        (
+            1
+            + total_return
+        )
+        ** (
+            periods_per_year
+            / n_periods
+        )
+        - 1
+    )
 
 
 def compute_annualized_volatility(
     returns: pd.Series,
     periods_per_year: int = 252,
 ) -> float:
-    """Compute annualized volatility from a return series."""
-    clean_returns = returns.dropna()
+    clean = returns.dropna()
 
-    if clean_returns.empty:
+    if clean.empty:
         return 0.0
 
-    return float(clean_returns.std() * (periods_per_year**0.5))
+    return float(
+        clean.std()
+        * (
+            periods_per_year
+            ** 0.5
+        )
+    )
 
 
 def compute_sharpe_ratio(
@@ -49,101 +85,229 @@ def compute_sharpe_ratio(
     risk_free_rate: float = 0.0,
     periods_per_year: int = 252,
 ) -> float:
-    """Compute annualized Sharpe ratio.
+    clean = returns.dropna()
 
-    Parameters
-    ----------
-    returns:
-        Periodic strategy returns.
-    risk_free_rate:
-        Annual risk-free rate expressed as a decimal.
-    periods_per_year:
-        Number of return periods per year.
-    """
-    clean_returns = returns.dropna()
-
-    if clean_returns.empty:
+    if clean.empty:
         return 0.0
 
-    periodic_risk_free_rate = risk_free_rate / periods_per_year
-    excess_returns = clean_returns - periodic_risk_free_rate
+    excess = (
+        clean
+        - risk_free_rate
+        / periods_per_year
+    )
 
-    volatility = excess_returns.std()
+    volatility = excess.std()
 
-    if volatility == 0 or pd.isna(volatility):
+    if (
+        volatility == 0
+        or pd.isna(
+            volatility
+        )
+    ):
         return 0.0
 
-    return float((excess_returns.mean() / volatility) * (periods_per_year**0.5))
+    return float(
+        (
+            excess.mean()
+            / volatility
+        )
+        * (
+            periods_per_year
+            ** 0.5
+        )
+    )
 
 
-def compute_drawdown(portfolio_value: pd.Series) -> pd.Series:
-    """Compute drawdown series from portfolio value."""
-    running_max = portfolio_value.cummax()
-    drawdown = portfolio_value / running_max - 1
-    drawdown.name = "drawdown"
+def compute_drawdown(
+    portfolio_value: pd.Series,
+) -> pd.Series:
+    running_max = (
+        portfolio_value
+        .cummax()
+    )
 
-    return drawdown
+    result = (
+        portfolio_value
+        / running_max
+        - 1
+    )
+
+    result.name = "drawdown"
+
+    return result
 
 
-def compute_max_drawdown(portfolio_value: pd.Series) -> float:
-    """Compute maximum drawdown from portfolio value."""
-    drawdown = compute_drawdown(portfolio_value)
-
-    return float(drawdown.min())
-
-
-def compute_win_rate(returns: pd.Series) -> float:
-    """Compute the fraction of positive returns."""
-    clean_returns = returns.dropna()
-
-    if clean_returns.empty:
+def compute_max_drawdown(
+    portfolio_value: pd.Series,
+) -> float:
+    if portfolio_value.empty:
         return 0.0
 
-    return float((clean_returns > 0).mean())
+    return float(
+        compute_drawdown(
+            portfolio_value
+        ).min()
+    )
+
+
+def compute_win_rate(
+    returns: pd.Series,
+) -> float:
+    clean = returns.dropna()
+
+    if clean.empty:
+        return 0.0
+
+    return float(
+        (
+            clean
+            > 0
+        ).mean()
+    )
+
+
+def compute_trade_count(
+    positions: pd.Series,
+) -> int:
+    """Count entries from flat into a position."""
+    clean = (
+        positions
+        .fillna(0)
+        .astype(int)
+    )
+
+    previous = (
+        clean
+        .shift(1)
+        .fillna(0)
+        .astype(int)
+    )
+
+    return int(
+        (
+            (clean != 0)
+            & (
+                previous == 0
+            )
+        ).sum()
+    )
+
+
+def compute_average_holding_period(
+    positions: pd.Series,
+) -> float:
+    """Average trade length in periods."""
+    clean = (
+        positions
+        .fillna(0)
+        .astype(int)
+    )
+
+    lengths: list[int] = []
+
+    current = 0
+
+    for value in clean:
+        if value != 0:
+            current += 1
+
+        elif current > 0:
+            lengths.append(
+                current
+            )
+
+            current = 0
+
+    if current > 0:
+        lengths.append(
+            current
+        )
+
+    if not lengths:
+        return 0.0
+
+    return float(
+        sum(lengths)
+        / len(lengths)
+    )
 
 
 def compute_performance_summary(
     portfolio_value: pd.Series,
     returns: pd.Series | None = None,
+    positions: pd.Series | None = None,
+    turnover: pd.Series | None = None,
     risk_free_rate: float = 0.0,
     periods_per_year: int = 252,
 ) -> dict[str, float]:
-    """Compute a complete performance summary.
-
-    Parameters
-    ----------
-    portfolio_value:
-        Portfolio value series.
-    returns:
-        Optional return series. If None, returns are computed from portfolio value.
-    risk_free_rate:
-        Annual risk-free rate.
-    periods_per_year:
-        Number of periods per year.
-
-    Returns
-    -------
-    dict[str, float]
-        Performance summary.
-    """
     if returns is None:
-        returns = portfolio_value.pct_change().dropna()
+        returns = (
+            portfolio_value
+            .pct_change()
+            .dropna()
+        )
 
-    return {
-        "total_return": compute_total_return(portfolio_value),
-        "annualized_return": compute_annualized_return(
-            portfolio_value,
-            periods_per_year=periods_per_year,
+    summary = {
+        "total_return": (
+            compute_total_return(
+                portfolio_value
+            )
         ),
-        "annualized_volatility": compute_annualized_volatility(
-            returns,
-            periods_per_year=periods_per_year,
+        "annualized_return": (
+            compute_annualized_return(
+                portfolio_value,
+                periods_per_year,
+            )
         ),
-        "sharpe_ratio": compute_sharpe_ratio(
-            returns,
-            risk_free_rate=risk_free_rate,
-            periods_per_year=periods_per_year,
+        "annualized_volatility": (
+            compute_annualized_volatility(
+                returns,
+                periods_per_year,
+            )
         ),
-        "max_drawdown": compute_max_drawdown(portfolio_value),
-        "win_rate": compute_win_rate(returns),
+        "sharpe_ratio": (
+            compute_sharpe_ratio(
+                returns,
+                risk_free_rate,
+                periods_per_year,
+            )
+        ),
+        "max_drawdown": (
+            compute_max_drawdown(
+                portfolio_value
+            )
+        ),
+        "win_rate": (
+            compute_win_rate(
+                returns
+            )
+        ),
     }
+
+    if positions is not None:
+        summary[
+            "number_of_trades"
+        ] = float(
+            compute_trade_count(
+                positions
+            )
+        )
+
+        summary[
+            "average_holding_period"
+        ] = (
+            compute_average_holding_period(
+                positions
+            )
+        )
+
+    if turnover is not None:
+        summary[
+            "total_turnover"
+        ] = float(
+            turnover
+            .fillna(0)
+            .sum()
+        )
+
+    return summary
