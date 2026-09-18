@@ -2,10 +2,76 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
 import yfinance as yf
+
+
+def _extract_prices(
+    data: pd.DataFrame,
+    tickers: list[str],
+    price_field: str,
+) -> pd.DataFrame:
+    if data.empty:
+        return pd.DataFrame()
+
+    if isinstance(
+        data.columns,
+        pd.MultiIndex,
+    ):
+        first_level = (
+            data.columns
+            .get_level_values(0)
+        )
+
+        if (
+            price_field
+            not in first_level
+        ):
+            raise ValueError(
+                f"Price field '{price_field}' not found in downloaded data."
+            )
+
+        prices = (
+            data[
+                price_field
+            ].copy()
+        )
+
+        if isinstance(
+            prices,
+            pd.Series,
+        ):
+            prices = (
+                prices
+                .to_frame(
+                    name=tickers[0]
+                )
+            )
+
+        return prices
+
+    if (
+        price_field
+        not in data.columns
+    ):
+        raise ValueError(
+            f"Price field '{price_field}' not found in downloaded data."
+        )
+
+    prices = data[
+        [
+            price_field
+        ]
+    ].copy()
+
+    prices.columns = [
+        tickers[0]
+    ]
+
+    return prices
 
 
 def download_adjusted_prices(
@@ -14,98 +80,116 @@ def download_adjusted_prices(
     end: str | None = None,
     price_field: str = "Adj Close",
     auto_adjust: bool = False,
+    batch_size: int = 100,
 ) -> pd.DataFrame:
-    """Download adjusted price data from Yahoo Finance.
-
-    Parameters
-    ----------
-    tickers:
-        Iterable of ticker symbols.
-    start:
-        Start date in YYYY-MM-DD format.
-    end:
-        End date in YYYY-MM-DD format. If None, yfinance uses the latest
-        available data.
-    price_field:
-        Price field to extract from the downloaded data. Default is
-        "Adj Close".
-    auto_adjust:
-        Whether yfinance should automatically adjust OHLC prices.
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame of prices with dates as index and tickers as columns.
-
-    Raises
-    ------
-    ValueError
-        If no tickers are provided or if the requested price field is missing.
-    """
-    ticker_list = list(tickers)
-
-    if not ticker_list:
-        raise ValueError("At least one ticker is required.")
-
-    data = yf.download(
-        tickers=ticker_list,
-        start=start,
-        end=end,
-        auto_adjust=auto_adjust,
-        progress=False,
-        group_by="column",
+    """Download Yahoo Finance prices in batches."""
+    ticker_list = list(
+        dict.fromkeys(
+            tickers
+        )
     )
 
-    if data.empty:
-        raise ValueError("No data was downloaded. Check tickers and date range.")
+    if not ticker_list:
+        raise ValueError(
+            "At least one ticker is required."
+        )
 
-    if isinstance(data.columns, pd.MultiIndex):
-        if price_field not in data.columns.get_level_values(0):
-            raise ValueError(
-                f"Price field '{price_field}' not found in downloaded data."
-            )
-        prices = data[price_field].copy()
-    else:
-        if price_field not in data.columns:
-            raise ValueError(
-                f"Price field '{price_field}' not found in downloaded data."
-            )
-        prices = data[[price_field]].copy()
-        prices.columns = ticker_list
+    if batch_size < 1:
+        raise ValueError(
+            "batch_size must be positive."
+        )
 
-    prices = prices.sort_index()
-    prices = prices.dropna(axis=1, how="all")
+    frames: list[
+        pd.DataFrame
+    ] = []
+
+    for start_idx in range(
+        0,
+        len(ticker_list),
+        batch_size,
+    ):
+        batch = ticker_list[
+            start_idx:
+            start_idx + batch_size
+        ]
+
+        data = yf.download(
+            tickers=batch,
+            start=start,
+            end=end,
+            auto_adjust=auto_adjust,
+            progress=False,
+            group_by="column",
+            threads=True,
+        )
+
+        prices = _extract_prices(
+            data,
+            batch,
+            price_field,
+        )
+
+        if not prices.empty:
+            frames.append(
+                prices
+            )
+
+    if not frames:
+        raise ValueError(
+            "No data was downloaded. Check tickers and date range."
+        )
+
+    prices = pd.concat(
+        frames,
+        axis=1,
+    )
+
+    prices = prices.loc[
+        :,
+        ~prices.columns.duplicated(),
+    ]
+
+    prices = (
+        prices
+        .sort_index()
+        .dropna(
+            axis=1,
+            how="all",
+        )
+    )
 
     return prices
 
 
-def save_prices(prices: pd.DataFrame, output_path: str) -> None:
-    """Save price data to a CSV file.
+def save_prices(
+    prices: pd.DataFrame,
+    output_path: str | Path,
+) -> None:
+    path = Path(
+        output_path
+    )
 
-    Parameters
-    ----------
-    prices:
-        Price DataFrame to save.
-    output_path:
-        Destination CSV file path.
-    """
-    prices.to_csv(output_path, index=True)
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    prices.to_csv(
+        path,
+        index=True,
+    )
 
 
-def load_prices(input_path: str) -> pd.DataFrame:
-    """Load price data from a CSV file.
+def load_prices(
+    input_path: str | Path,
+) -> pd.DataFrame:
+    prices = pd.read_csv(
+        input_path,
+        index_col=0,
+        parse_dates=True,
+    )
 
-    Parameters
-    ----------
-    input_path:
-        Path to a CSV file containing price data.
-
-    Returns
-    -------
-    pd.DataFrame
-        Price DataFrame indexed by date.
-    """
-    prices = pd.read_csv(input_path, index_col=0, parse_dates=True)
-    prices = prices.sort_index()
-
-    return prices
+    return (
+        prices
+        .sort_index()
+    )
