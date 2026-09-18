@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pairs-trading-research"
-version = "0.1.0"
-description = "A reproducible framework for studying cointegration-based statistical arbitrage."
+version = "1.0.0"
+description = "A reproducible research, scanning, walk-forward, and paper-trading framework for cointegration-based statistical arbitrage."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -18,16 +18,17 @@ keywords = [
     "cointegration",
     "quantitative-finance",
     "backtesting",
-    "pca",
-    "arma"
+    "walk-forward",
+    "paper-trading"
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Information Analysis"
 ]
 
@@ -40,7 +41,9 @@ dependencies = [
     "yfinance",
     "matplotlib",
     "plotly",
-    "pyyaml"
+    "pyyaml",
+    "lxml",
+    "tabulate"
 ]
 
 [project.optional-dependencies]
