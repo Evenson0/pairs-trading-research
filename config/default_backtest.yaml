@@ -1,7 +1,7 @@
 backtest:
   initial_capital: 100000
   position_type: "dollar_neutral"
-  allow_short_selling: true
+  gross_exposure: 1.0
   transaction_cost_bps: 10
   slippage_bps: 5
 
@@ -9,19 +9,12 @@ signals:
   zscore_window: 20
   entry_threshold: 2.0
   exit_threshold: 0.5
+  watch_threshold: 1.5
   stop_loss_zscore: 3.5
 
 risk:
-  max_position_size: 0.20
-  max_leverage: 1.0
-  max_drawdown_limit: 0.20
-
-evaluation:
-  metrics:
-    - total_return
-    - annualized_return
-    - volatility
-    - sharpe_ratio
-    - max_drawdown
-    - win_rate
-    - number_of_trades
+  max_open_pairs: 5
+  max_pair_gross_exposure: 0.20
+  max_portfolio_gross_exposure: 1.00
+  max_sector_gross_exposure: 0.40
+  max_drawdown: 0.10
