@@ -5,9 +5,60 @@ from __future__ import annotations
 from itertools import combinations
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from statsmodels.tsa.stattools import adfuller, coint
+
+
+def _align_series(y: pd.Series, x: pd.Series) -> pd.DataFrame:
+    aligned = pd.concat(
+        [
+            y.rename("y"),
+            x.rename("x"),
+        ],
+        axis=1,
+    ).dropna()
+
+    if len(aligned) < 3:
+        raise ValueError("At least three aligned observations are required.")
+
+    return aligned
+
+
+def estimate_hedge_parameters(
+    y: pd.Series,
+    x: pd.Series,
+    add_constant: bool = True,
+) -> dict[str, float]:
+    """Estimate OLS intercept and hedge ratio.
+
+    Model
+    -----
+    y_t = alpha + beta * x_t + epsilon_t
+    """
+    aligned = _align_series(y, x)
+
+    y_aligned = aligned["y"]
+    x_aligned = aligned["x"]
+
+    if add_constant:
+        design = sm.add_constant(x_aligned)
+        model = sm.OLS(y_aligned, design).fit()
+
+        intercept = float(model.params.iloc[0])
+        hedge_ratio = float(model.params.iloc[1])
+    else:
+        model = sm.OLS(y_aligned, x_aligned).fit()
+
+        intercept = 0.0
+        hedge_ratio = float(model.params.iloc[0])
+
+    return {
+        "intercept": intercept,
+        "hedge_ratio": hedge_ratio,
+        "r_squared": float(model.rsquared),
+    }
 
 
 def estimate_hedge_ratio(
@@ -15,103 +66,57 @@ def estimate_hedge_ratio(
     x: pd.Series,
     add_constant: bool = True,
 ) -> float:
-    """Estimate the hedge ratio between two price series using OLS.
-
-    The model is:
-
-        y_t = alpha + beta x_t + epsilon_t
-
-    The hedge ratio is beta.
-
-    Parameters
-    ----------
-    y:
-        Dependent price series.
-    x:
-        Independent price series.
-    add_constant:
-        Whether to include an intercept in the OLS regression.
-
-    Returns
-    -------
-    float
-        Estimated hedge ratio.
-    """
-    aligned = pd.concat([y, x], axis=1).dropna()
-    y_aligned = aligned.iloc[:, 0]
-    x_aligned = aligned.iloc[:, 1]
-
-    if add_constant:
-        x_model = sm.add_constant(x_aligned)
-    else:
-        x_model = x_aligned
-
-    model = sm.OLS(y_aligned, x_model).fit()
-
-    if add_constant:
-        return float(model.params.iloc[1])
-
-    return float(model.params.iloc[0])
+    """Return only the OLS hedge ratio."""
+    return estimate_hedge_parameters(
+        y,
+        x,
+        add_constant=add_constant,
+    )["hedge_ratio"]
 
 
 def compute_spread(
     y: pd.Series,
     x: pd.Series,
     hedge_ratio: float,
+    intercept: float = 0.0,
 ) -> pd.Series:
-    """Compute the price spread between two assets.
+    """Compute the OLS residual spread.
 
-    The spread is defined as:
-
-        spread_t = y_t - beta x_t
-
-    Parameters
-    ----------
-    y:
-        First price series.
-    x:
-        Second price series.
-    hedge_ratio:
-        Estimated hedge ratio beta.
-
-    Returns
-    -------
-    pd.Series
-        Spread series.
+    spread_t = y_t - alpha - beta*x_t
     """
-    aligned = pd.concat([y, x], axis=1).dropna()
-    y_aligned = aligned.iloc[:, 0]
-    x_aligned = aligned.iloc[:, 1]
+    aligned = _align_series(y, x)
 
-    spread = y_aligned - hedge_ratio * x_aligned
+    spread = (
+        aligned["y"]
+        - intercept
+        - hedge_ratio * aligned["x"]
+    )
+
     spread.name = "spread"
 
     return spread
 
 
 def adf_test(series: pd.Series) -> dict[str, Any]:
-    """Run the Augmented Dickey-Fuller test on a time series.
+    """Run an Augmented Dickey-Fuller test."""
+    clean = (
+        series
+        .replace([np.inf, -np.inf], np.nan)
+        .dropna()
+    )
 
-    Parameters
-    ----------
-    series:
-        Time series to test.
+    if len(clean) < 10:
+        raise ValueError(
+            "At least ten observations are required for the ADF test."
+        )
 
-    Returns
-    -------
-    dict[str, Any]
-        Test statistic, p-value, lags used, number of observations,
-        and critical values.
-    """
-    clean_series = series.dropna()
-
-    result = adfuller(clean_series)
+    result = adfuller(clean)
 
     return {
-        "test_statistic": result[0],
-        "p_value": result[1],
-        "lags_used": result[2],
-        "n_observations": result[3],
+        "test_statistic": float(result[0]),
+        "p_value": float(result[1]),
+        "lags_used": int(result[2]),
+        "n_observations": int(result[3]),
         "critical_values": result[4],
     }
 
@@ -120,29 +125,17 @@ def engle_granger_test(
     y: pd.Series,
     x: pd.Series,
 ) -> dict[str, Any]:
-    """Run the Engle-Granger cointegration test on two price series.
+    """Run the Engle-Granger cointegration test."""
+    aligned = _align_series(y, x)
 
-    Parameters
-    ----------
-    y:
-        First price series.
-    x:
-        Second price series.
-
-    Returns
-    -------
-    dict[str, Any]
-        Cointegration test statistic, p-value, and critical values.
-    """
-    aligned = pd.concat([y, x], axis=1).dropna()
-    y_aligned = aligned.iloc[:, 0]
-    x_aligned = aligned.iloc[:, 1]
-
-    statistic, p_value, critical_values = coint(y_aligned, x_aligned)
+    statistic, p_value, critical_values = coint(
+        aligned["y"],
+        aligned["x"],
+    )
 
     return {
-        "test_statistic": statistic,
-        "p_value": p_value,
+        "test_statistic": float(statistic),
+        "p_value": float(p_value),
         "critical_values": critical_values,
     }
 
@@ -152,36 +145,35 @@ def analyze_pair(
     ticker_y: str,
     ticker_x: str,
 ) -> dict[str, Any]:
-    """Analyze a candidate pair for cointegration.
-
-    Parameters
-    ----------
-    prices:
-        Price DataFrame with tickers as columns.
-    ticker_y:
-        First ticker.
-    ticker_x:
-        Second ticker.
-
-    Returns
-    -------
-    dict[str, Any]
-        Pair diagnostics including hedge ratio, Engle-Granger p-value,
-        ADF p-value on the spread, and correlation.
-    """
+    """Return statistical diagnostics for one candidate pair."""
     y = prices[ticker_y]
     x = prices[ticker_x]
 
-    hedge_ratio = estimate_hedge_ratio(y, x)
-    spread = compute_spread(y, x, hedge_ratio)
+    parameters = estimate_hedge_parameters(y, x)
+
+    spread = compute_spread(
+        y,
+        x,
+        hedge_ratio=parameters["hedge_ratio"],
+        intercept=parameters["intercept"],
+    )
+
     adf_result = adf_test(spread)
     coint_result = engle_granger_test(y, x)
-    correlation = y.corr(x)
+
+    correlation = float(
+        pd.concat([y, x], axis=1)
+        .dropna()
+        .corr()
+        .iloc[0, 1]
+    )
 
     return {
         "ticker_y": ticker_y,
         "ticker_x": ticker_x,
-        "hedge_ratio": hedge_ratio,
+        "intercept": parameters["intercept"],
+        "hedge_ratio": parameters["hedge_ratio"],
+        "r_squared": parameters["r_squared"],
         "spread_adf_p_value": adf_result["p_value"],
         "coint_p_value": coint_result["p_value"],
         "correlation": correlation,
@@ -194,28 +186,26 @@ def find_cointegrated_pairs(
     max_p_value: float = 0.05,
     min_correlation: float = 0.50,
 ) -> pd.DataFrame:
-    """Find cointegrated pairs in a price DataFrame.
+    """Legacy pair finder.
 
-    Parameters
-    ----------
-    prices:
-        Price DataFrame with tickers as columns.
-    max_p_value:
-        Maximum Engle-Granger p-value required to keep a pair.
-    min_correlation:
-        Minimum absolute correlation required to keep a pair.
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame of selected pairs sorted by cointegration p-value.
+    Prefer pair_selection.select_pairs() for production research.
     """
     results: list[dict[str, Any]] = []
 
-    for ticker_y, ticker_x in combinations(prices.columns, 2):
+    for ticker_y, ticker_x in combinations(
+        prices.columns,
+        2,
+    ):
         try:
-            pair_result = analyze_pair(prices, ticker_y, ticker_x)
-        except Exception:
+            pair_result = analyze_pair(
+                prices,
+                ticker_y,
+                ticker_x,
+            )
+        except (
+            ValueError,
+            np.linalg.LinAlgError,
+        ):
             continue
 
         if (
@@ -225,16 +215,10 @@ def find_cointegrated_pairs(
             results.append(pair_result)
 
     if not results:
-        return pd.DataFrame(
-            columns=[
-                "ticker_y",
-                "ticker_x",
-                "hedge_ratio",
-                "spread_adf_p_value",
-                "coint_p_value",
-                "correlation",
-                "n_observations",
-            ]
-        )
+        return pd.DataFrame()
 
-    return pd.DataFrame(results).sort_values("coint_p_value").reset_index(drop=True)
+    return (
+        pd.DataFrame(results)
+        .sort_values("coint_p_value")
+        .reset_index(drop=True)
+    )
